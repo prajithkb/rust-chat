@@ -47,17 +47,25 @@ async fn send(str: &str, mut writer: &TcpStream) -> Result<()> {
     Ok(())
 }
 
+fn enter_name() {
+    print!("Enter your name: ");
+    flush_stdout();
+}
+
 async fn try_main(addr: impl ToSocketAddrs) -> Result<()> {
     let stream = TcpStream::connect(addr).await?;
     let (reader, mut writer) = (&stream, &stream);
     let reader = BufReader::new(reader);
     let mut lines_from_server = futures::StreamExt::fuse(reader.lines());
-
+    enter_name();
     let stdin = BufReader::new(stdin());
-    print!("Enter your name: ");
-    flush_stdout();
     let mut lines_from_stdin = futures::StreamExt::fuse(stdin.lines());
-    let name = lines_from_stdin.next().await.unwrap()?;
+    let mut name = lines_from_stdin.next().await.unwrap()?;
+    while name.is_empty() {
+        println!("Name cannot be empty.");
+        enter_name();
+        name = lines_from_stdin.next().await.unwrap()?;
+    }
     println!("Welcome [{}], connecting to server..", name);
     send(&name, & mut writer).await?;
     loop {
